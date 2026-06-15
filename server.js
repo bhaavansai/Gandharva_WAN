@@ -206,6 +206,10 @@ async function startWhatsAppClient() {
     killOrphanedChrome();
     client = createClient();
     setupClientEvents(client);
+    console.log("Puppeteer executable:", puppeteer.executablePath());
+
+    const fs = require("fs");
+    console.log("Chrome exists:", fs.existsSync(puppeteer.executablePath()));
     await client.initialize();
   } catch (err) {
     console.error(
