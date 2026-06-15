@@ -10,6 +10,7 @@ const {
 } = require("./services/receiptService");
 const { generateReceiptPdfFile } = require("./services/receiptPdfService");
 const { execSync } = require("child_process");
+const puppeteer = require("puppeteer");
 require("dotenv").config();
 
 const app = express();
@@ -27,31 +28,48 @@ let isInitializing = false;
 let initRetries = 0;
 let reinitTimer = null;
 
+function getPuppeteerOptions() {
+  const options = {
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--disable-software-rasterizer",
+      "--no-first-run",
+      "--no-zygote",
+      ...(process.platform === "linux" ? ["--single-process"] : []),
+      "--disable-extensions",
+      "--disable-background-networking",
+      "--disable-sync",
+      "--disable-translate",
+      "--hide-scrollbars",
+      "--mute-audio",
+    ],
+    timeout: 120000,
+  };
+
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    options.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  } else {
+    try {
+      options.executablePath = puppeteer.executablePath();
+    } catch (err) {
+      console.warn("⚠️ Puppeteer Chrome not found locally:", err.message);
+    }
+  }
+
+  return options;
+}
+
 function createClient() {
   return new Client({
     authStrategy: new LocalAuth({
       dataPath: AUTH_DATA_PATH,
       rmMaxRetries: 20,
     }),
-    puppeteer: {
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--disable-software-rasterizer",
-        "--no-first-run",
-        "--no-zygote",
-        "--disable-extensions",
-        "--disable-background-networking",
-        "--disable-sync",
-        "--disable-translate",
-        "--hide-scrollbars",
-        "--mute-audio",
-      ],
-      timeout: 120000,
-    },
+    puppeteer: getPuppeteerOptions(),
     webVersionCache: {
       type: "remote",
       remotePath:
